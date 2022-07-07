@@ -45,6 +45,7 @@ def interval_coverages(bed_fname, bam_fname, by_count, min_mapq, processes, fast
             return CNA.from_rows([], meta_dict=meta)
 
     # Calculate average read depth in each bin
+    # print('by_count:', by_count)
     if by_count:
         results = interval_coverages_count(bed_fname, bam_fname, min_mapq,
                                            processes, fasta)

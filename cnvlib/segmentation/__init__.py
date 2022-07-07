@@ -25,6 +25,23 @@ def do_segmentation(cnarr, method, threshold=None, variants=None,
                     save_dataframe=False, rscript_path="Rscript",
                     processes=1, smooth_cbs=False):
     """Infer copy number segments from the given coverage table."""
+    # TODO: print segmentation parameters
+    # print('bug:',';'.join([str(method), str(threshold), str(variants), str(skip_low), str(skip_outliers),
+    #                       str(min_weight), str(save_dataframe), str(rscript_path), str(processes),
+    #                       str(smooth_cbs)]))
+    """
+    method = 'cbs',
+    threshold=None, 
+    variants=None,
+    skip_low=False, 
+    skip_outliers=10, 
+    min_weight=0,   
+    save_dataframe=False, 
+    rscript_path="Rscript",
+    processes=10, 
+    smooth_cbs=False
+    """
+    # TODO
     if method not in SEGMENT_METHODS:
         raise ValueError("'method' must be one of: "
                          + ", ".join(SEGMENT_METHODS)
@@ -57,6 +74,7 @@ def do_segmentation(cnarr, method, threshold=None, variants=None,
             rstr = _to_str(rstr)
 
     else:
+        #print('bug:', 'cnr->cns')
         with parallel.pick_pool(processes) as pool:
             rets = list(pool.map(_ds, ((ca, method, threshold, variants,
                                         skip_low, skip_outliers, min_weight,
@@ -96,7 +114,6 @@ def _do_segmentation(cnarr, method, threshold, variants=None,
     """Infer copy number segments from the given coverage table."""
     if not len(cnarr):
         return cnarr
-
     filtered_cn = cnarr.copy()
     # Filter out bins with no or near-zero sequencing coverage
     if skip_low:
@@ -127,7 +144,6 @@ def _do_segmentation(cnarr, method, threshold, variants=None,
         logging.info(msg)
     if not len(filtered_cn):
         return filtered_cn
-
     seg_out = ""
     if method == 'haar':
         segarr = haar.segment_haar(filtered_cn, threshold)
@@ -142,10 +158,10 @@ def _do_segmentation(cnarr, method, threshold, variants=None,
         # Run R scripts to calculate copy number segments
         rscript = {'cbs': cbs.CBS_RSCRIPT,
                    'flasso': flasso.FLASSO_RSCRIPT,
-                  }[method]
+                   }[method]
 
         filtered_cn['start'] += 1  # Convert to 1-indexed coordinates for R
-        with tempfile.NamedTemporaryFile(suffix='.cnr', mode="w+t") as tmp:
+        with tempfile.NamedTemporaryFile(suffix='.cnr', delete=False, mode="w+t") as tmp:
             # TODO tabio.write(filtered_cn, tmp, 'seg')
             filtered_cn.data.to_csv(tmp, index=False, sep='\t',
                                     float_format='%.6g', mode="w+t")
@@ -154,10 +170,14 @@ def _do_segmentation(cnarr, method, threshold, variants=None,
                 'probes_fname': tmp.name,
                 'sample_id': cnarr.sample_id,
                 'threshold': threshold,
-								'smooth_cbs': smooth_cbs
+                'smooth_cbs': smooth_cbs
             }
             with core.temp_write_text(rscript % script_strings,
                                       mode='w+t') as script_fname:
+                #if filtered_cn['chromosome'].iat[0] == 'chr8':
+                #    print('bug: script_fname[chr8] =', script_fname)
+                #if filtered_cn['chromosome'].iat[0] == 'chrX':
+                #    print('bug: script_fname[chrX] =', script_fname)
                 seg_out = core.call_quiet(rscript_path,
                                           "--no-restore",
                                           "--no-environ",
@@ -177,6 +197,7 @@ def _do_segmentation(cnarr, method, threshold, variants=None,
         raise ValueError("Unknown method %r" % method)
 
     segarr.meta = cnarr.meta.copy()
+    # variants = None
     if variants and not method.startswith('hmm'):
         # Re-segment the variant allele freqs within each segment
         # TODO train on all segments together
@@ -185,8 +206,11 @@ def _do_segmentation(cnarr, method, threshold, variants=None,
                    for segment, subvarr in variants.by_ranges(segarr)]
         segarr = segarr.as_dataframe(pd.concat(newsegs))
         segarr['baf'] = variants.baf_by_ranges(segarr)
-
+    #if filtered_cn['chromosome'].iat[0] == 'chr8':
+    #    print('bug: segarr[chr8] =', segarr.data.columns)
+    #    print('bug: cnarr.meta', cnarr.data.columns)
     segarr = transfer_fields(segarr, cnarr)
+
     if save_dataframe:
         return segarr, seg_out
     else:

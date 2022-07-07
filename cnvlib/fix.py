@@ -51,6 +51,7 @@ def do_fix(target_raw, antitarget_raw, reference,
     # (Subtract the reference log2 copy number to get the log2 ratio)
     cnarr.data['log2'] -= ref_matched[log2_key]
     cnarr = apply_weights(cnarr, ref_matched, log2_key, spread_key)
+    # TODO print(ZNF703 log2)
     cnarr.center_all(skip_low=True)
     return cnarr
 

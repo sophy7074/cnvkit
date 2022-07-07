@@ -244,6 +244,7 @@ class GenomicArray(object):
                 q_arm = subtable.index[cmere_idx:]
                 yield chrom, self.as_dataframe(subtable.loc[q_arm,:])
             else:
+                # print('bug: 2')
                 # No centromere found -- emit the whole chromosome
                 if cmere_idx:
                     logging.debug("%s: Ignoring centromere at %d of %d bins (size %s)",

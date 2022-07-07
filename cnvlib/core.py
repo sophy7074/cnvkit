@@ -67,6 +67,7 @@ def temp_write_text(text, mode="w+b"):
 
     NB: This won't work on Windows b/c the file stays open.
     """
+    # , delete=False
     with tempfile.NamedTemporaryFile(mode=mode) as tmp:
         tmp.write(text)
         tmp.flush()

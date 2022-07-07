@@ -190,6 +190,50 @@ def batch_run_sample(bam_fname, target_bed, antitarget_bed, ref_fname,
                                             **({'threshold': 1e-6}
                                                if seq_method == 'wgs'
                                                else {}))
+    # TODO: find the reason of ZNF703 missing
+    # 此处segmentation默认是CBS算法，
+    # 对染色体臂中每个block的log2值和weight值进行统计分析，找到周边log2值差异的位置
+    # 调用的R包DNAcopy来找到breakpoint，其中核心函数为
+    # changepoints函数中调用的
+    # zzz <- .Fortran("wfindcpt",
+    #                           n = as.integer(current.n),
+    #                           x = as.double(current.genomdat),
+    #                           tss = as.double(current.tss),
+    #                           wts = as.double(current.wts),
+    #                           rwts = as.double(current.rwts),
+    #                           cwts = as.double(current.cwts),
+    #                           px = double(current.n),
+    #                           sx = double(current.n),
+    #                           nperm = as.integer(nperm),
+    #                           cpval = as.double(alpha),
+    #                           ncpt = integer(1),
+    #                           icpt = integer(2),
+    #                           hybrid = as.logical(hybrid),
+    #                           al0 = as.integer(min.width),
+    #                           hk = as.integer(kmax),
+    #                           mncwt = double(kmax),
+    #                           delta = as.double(delta),
+    #                           ngrid = as.integer(ngrid),
+    #                           sbn = as.integer(sbn),
+    #                           sbdry = as.integer(sbdry),
+    #                           tol = as.double(tol),
+    #                           PACKAGE = "DNAcopy")
+    # 该处应该是调用的C语言中的wfindcpt函数来进行cbs统计
+    # 当ZNF703的2个block的log2值与两侧有明显差异时暂时无法精确判断
+    # chr8	36799656	36950323	Antitarget	-0.123829	0.0715613	0.992124
+    # chr8	36950324	37100990	Antitarget	0.111109	0.104655	0.950712
+    # chr8	37100991	37251657	Antitarget	-0.233041	0.0764866	0.947261
+    # chr8	37251658	37402324	Antitarget	-0.000626362	0.100135	0.989882
+    # chr8	37402325	37552992	Antitarget	-0.041566	0.115273	0.990973
+    # chr8	37553493	37553745	ZNF703	1.58111	2820.49	0.957866
+    # chr8	37555941	37556197	ZNF703	2.00035	4181.93	0.997194
+    # chr8	37556698	37654281	Antitarget	-0.108937	0.11217	0.975521
+    # chr8	37655558	37671908	Antitarget	-0.564815	0.123051	0.816829
+    # chr8	37672409	37672490	ADGRA2	-0.235625	945.768	0.913949
+    # chr8	37672991	37685900	Antitarget	0.829232	0.201394	0.37068
+    # chr8	37686401	37686482	ADGRA2	0.0825386	1055.05	0.995363
+    # tabio.write(segments, sample_pfx + '.seg.cns')
+    # TODO
 
     logging.info("Post-processing %s.cns ...", sample_pfx)
     # TODO/ENH take centering shift & apply to .cnr for use in segmetrics
